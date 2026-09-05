@@ -40,6 +40,12 @@ Upload a research paper and the workflow automatically:
 9. Appends new papers or updates existing records
 10. Stores the final literature intelligence in Google Sheets
 
+<img width="800" height="862" alt="image" src="https://github.com/user-attachments/assets/ee04e0c2-bd1a-4190-9d66-73413c3b47c7" />
+
+
+<img width="1280" height="612" alt="image" src="https://github.com/user-attachments/assets/28a5ac3e-2c53-4448-85c7-13eaa1f1a5ef" />
+
+
 ---
 
 ## 🧠 Workflow Architecture
@@ -105,6 +111,9 @@ Each paper is transformed into a standardized research record containing:
 | `research_gap` | Potential gap or opportunity for future research |
 
 This creates a consistent dataset that can be used for **literature comparison, research-gap identification, and review-paper preparation**.
+
+<img width="1662" height="732" alt="image" src="https://github.com/user-attachments/assets/baad30bf-58ce-469c-95a2-ece01f084fab" />
+
 
 ---
 
