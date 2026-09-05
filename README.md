@@ -208,7 +208,7 @@ n8n-ai-research-paper-assistant/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/n8n-ai-research-paper-assistant.git
+git clone https://github.com/Krithika-Sulochana-08/n8n-ai-research-paper-assistant.git
 cd n8n-ai-research-paper-assistant
 ```
 
