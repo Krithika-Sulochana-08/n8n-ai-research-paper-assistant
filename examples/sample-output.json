@@ -1,1 +1,13 @@
-{}
+{
+  "paper_title": "Machine Learning Based Resource Allocation for Wireless Communication Systems",
+  "year": 2025,
+  "doi": "10.1234/example.2025.001",
+  "research_domain": "Wireless Communication and Machine Learning",
+  "methods_models": "Machine learning assisted resource allocation with adaptive power optimization",
+  "key_parameters": "Transmit power, channel quality, SNR, bandwidth, user demand",
+  "key_metrics": "Throughput, spectral efficiency, energy efficiency, outage probability",
+  "best_results": "The proposed approach improved resource utilization and achieved better system performance compared with conventional allocation methods.",
+  "tools_dataset": "Python-based simulation with synthetically generated channel data",
+  "limitations": "Evaluation was limited to simulated channel conditions and did not include real-world deployment.",
+  "research_gap": "Future work should validate the approach using real channel measurements and investigate adaptive allocation under rapidly changing environmental conditions."
+}
