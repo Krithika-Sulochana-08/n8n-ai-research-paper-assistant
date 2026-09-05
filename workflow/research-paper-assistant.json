@@ -1,1 +1,343 @@
-
+{
+  "name": "AI Research Paper Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "AI Research Paper Assistant",
+        "formDescription": "Upload a research paper in PDF format to generate a structured analysis including the research objective, methodology, key findings, limitations, research gaps, and future research opportunities.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Research Paper",
+              "fieldType": "file",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.6,
+      "position": [
+        0,
+        0
+      ],
+      "name": "On form submission"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "Research_Paper",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        0
+      ],
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI research-paper data extraction assistant.\n\nAnalyze the supplied research paper and extract ONLY information explicitly supported by the paper.\n\nThe output will be stored in a structured literature-review database. Therefore, responses must be concise, standardized, factual, and suitable for comparison across many research papers.\n\nIMPORTANT RULES:\n\n1. Do not write long explanations.\n2. Do not repeat the same information across fields.\n3. Do not infer numerical values that are not reported.\n4. If information is unavailable, return \"Not reported\".\n5. Preserve numerical values and units exactly where possible.\n6. Prefer standard technical terminology.\n7. Keep research_domain under 12 words.\n8. Keep methodology concise: maximum 5 major methods/models.\n9. Keep input parameters to the most important 5 parameters.\n10. Keep output metrics to the most important 5 metrics.\n11. Keep comparative results to the most important 3 quantitative findings.\n12. Keep tools_dataset under 30 words.\n13. Keep limitations under 35 words.\n14. Keep research_gap under 35 words.\n15. Do not include general background information.\n16. Do not include references cited by the paper as if they were results of the paper itself.\n17. Distinguish clearly between the CURRENT PAPER'S methodology/results and information discussed from previous studies.\n\nExtract:\n\npaper_title:\nExact title of the paper.\n\nyear:\nPublication year only.\n\ndoi:\nDOI only. Do not include https://doi.org/.\n\nresearch_domain:\nSpecific research area in maximum 12 words.\n\nmethodology:\nMain methods, algorithms, models, optimization techniques, or system architectures used in the CURRENT PAPER. Maximum 5 concise items.\n\ninput_parameters:\nMaximum 5 important experimental/simulation parameters.\n\nFor each parameter return:\n- parameter\n- value\n- unit\n- condition\n\noutput_metrics:\nMaximum 5 important evaluation/performance metrics.\n\nFor each metric return:\n- metric\n- value\n- unit\n- condition\n\ncomparative_results:\nMaximum 3 most important quantitative results or improvements reported by the CURRENT PAPER.\n\nFor each result return:\n- metric\n- value\n- unit\n- method\n\ntools_dataset:\nSoftware, simulation tools, experimental platforms, or datasets actually used by the CURRENT PAPER. Maximum 30 words.\n\nlimitations:\nThe most important limitation(s) of the CURRENT PAPER. Maximum 35 words.\n\nresearch_gap:\nThe specific unresolved problem that motivates the study or remains after the study. Maximum 35 words.\n\nCRITICAL:\nDo not extract detailed numerical results belonging only to papers cited in the literature review.\nPrioritize the proposed/current study's own parameters, methods, metrics, and results.\n\nResearch paper text:\n\n{{ $json.text }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        448,
+        0
+      ],
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        384,
+        208
+      ],
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Configure googlePalmApi in n8n"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"paper_title\": \"Exact title of the paper\",\n  \"year\": \"Publication year\",\n  \"doi\": \"DOI only or Not reported\",\n  \"research_domain\": \"Primary technical domain in 3-10 words\",\n  \"methods_models\": \"Maximum 5 main methods/models/algorithms separated by semicolons\",\n  \"key_parameters\": \"Maximum 5 important technical parameters with values and units separated by semicolons\",\n  \"key_metrics\": \"Maximum 5 principal performance metrics separated by semicolons\",\n  \"best_results\": \"Maximum 3 most important quantitative results with values and units separated by semicolons\",\n  \"tools_dataset\": \"Main dataset, software, simulation tool, or experimental platform in maximum 30 words\",\n  \"limitations\": \"Main explicitly reported limitation in maximum 35 words or Not reported\",\n  \"research_gap\": \"Main research gap or unresolved problem in maximum 35 words\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        592,
+        208
+      ],
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "items = _items\nrows = []\n\n\ndef text(value):\n    if value is None or value == \"\":\n        return \"Not reported\"\n\n    if isinstance(value, list):\n        return \"; \".join(str(x) for x in value)\n\n    return str(value)\n\n\ndef normalize_doi(value):\n    value = str(value or \"\").strip().lower()\n\n    value = value.replace(\"https://doi.org/\", \"\")\n    value = value.replace(\"http://doi.org/\", \"\")\n    value = value.replace(\"doi:\", \"\")\n\n    return value.strip()\n\n\ndef normalize_text(value):\n    value = str(value or \"\").strip().lower()\n\n    # Normalize repeated spaces without using re\n    value = \" \".join(value.split())\n\n    # Remove common punctuation\n    chars_to_remove = [\",\", \":\", \";\", \"'\", '\"', \"(\", \")\", \"[\", \"]\", \"{\", \"}\"]\n\n    for ch in chars_to_remove:\n        value = value.replace(ch, \"\")\n\n    return value.strip()\n\n\nfor item in items:\n\n    o = item[\"json\"].get(\"output\", {})\n\n    paper_title = text(o.get(\"paper_title\"))\n    year = text(o.get(\"year\"))\n    doi = text(o.get(\"doi\"))\n\n    # Key parameters\n    parameters = []\n\n    # Use new compact field if available\n    if o.get(\"key_parameters\"):\n        key_parameters = text(o.get(\"key_parameters\"))\n\n    else:\n        for p in o.get(\"input_parameters\", []):\n\n            name = p.get(\"parameter\", \"Not reported\")\n            value = p.get(\"value\", \"Not reported\")\n            unit = p.get(\"unit\", \"\")\n            condition = p.get(\"condition\", \"\")\n\n            entry = f\"{name}: {value}\"\n\n            if unit and unit != \"Not reported\":\n                entry += f\" {unit}\"\n\n            if condition and condition != \"Not reported\":\n                entry += f\" ({condition})\"\n\n            parameters.append(entry)\n\n        key_parameters = (\n            \"; \".join(parameters)\n            if parameters\n            else \"Not reported\"\n        )\n\n    # Key metrics\n    metrics = []\n\n    if o.get(\"key_metrics\"):\n        key_metrics = text(o.get(\"key_metrics\"))\n\n    else:\n        for p in o.get(\"output_metrics\", []):\n\n            name = p.get(\"metric\", \"Not reported\")\n            value = p.get(\"value\", \"Not reported\")\n            unit = p.get(\"unit\", \"\")\n            condition = p.get(\"condition\", \"\")\n\n            entry = f\"{name}: {value}\"\n\n            if unit and unit != \"Not reported\":\n                entry += f\" {unit}\"\n\n            if condition and condition != \"Not reported\":\n                entry += f\" ({condition})\"\n\n            metrics.append(entry)\n\n        key_metrics = (\n            \"; \".join(metrics)\n            if metrics\n            else \"Not reported\"\n        )\n\n    # Best results\n    results = []\n\n    if o.get(\"best_results\"):\n        best_results = text(o.get(\"best_results\"))\n\n    else:\n        for p in o.get(\"comparative_results\", []):\n\n            metric = p.get(\"metric\", \"Not reported\")\n            value = p.get(\"value\", \"Not reported\")\n            unit = p.get(\"unit\", \"\")\n            method = p.get(\"method\", \"\")\n\n            entry = f\"{metric}: {value}\"\n\n            if unit and unit != \"Not reported\":\n                entry += f\" {unit}\"\n\n            if method and method != \"Not reported\":\n                entry += f\" ({method})\"\n\n            results.append(entry)\n\n        best_results = (\n            \"; \".join(results)\n            if results\n            else \"Not reported\"\n        )\n\n    # Unique key\n    normalized_doi = normalize_doi(doi)\n\n    if normalized_doi and normalized_doi != \"not reported\":\n        unique_key = normalized_doi\n    else:\n        title_key = normalize_text(paper_title)\n        year_key = normalize_text(year)\n        unique_key = f\"{title_key}|{year_key}\"\n\n    # One row per paper\n    rows.append({\n        \"json\": {\n            \"paper_title\": paper_title,\n            \"year\": year,\n            \"doi\": doi,\n            \"research_domain\": text(o.get(\"research_domain\")),\n            \"methods_models\": text(\n                o.get(\"methods_models\", o.get(\"methodology\"))\n            ),\n            \"key_parameters\": key_parameters,\n            \"key_metrics\": key_metrics,\n            \"best_results\": best_results,\n            \"tools_dataset\": text(o.get(\"tools_dataset\")),\n            \"limitations\": text(o.get(\"limitations\")),\n            \"research_gap\": text(o.get(\"research_gap\")),\n            \"unique_key\": unique_key\n        }\n    })\n\n\nreturn rows"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        144
+      ],
+      "name": "Code in Python"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "paper_title": "={{ $json.paper_title }}",
+            "year": "={{ $json.year }}",
+            "doi": "={{ $json.doi }}",
+            "research_domain": "={{ $json.research_domain }}",
+            "methods_models": "={{ $json.methods_models }}",
+            "key_parameters": "={{ $json.key_parameters }}",
+            "key_metrics": "={{ $json.key_metrics }}",
+            "best_results": "={{ $json.best_results }}",
+            "tools_dataset": "={{ $json.tools_dataset }}",
+            "limitations": "={{ $json.limitations }}",
+            "research_gap": "={{ $json.research_gap }}",
+            "unique_key": "={{ $json.unique_key }}"
+          },
+          "matchingColumns": [
+            "unique_key"
+          ],
+          "schema": [
+            {
+              "id": "paper_title",
+              "displayName": "paper_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "year",
+              "displayName": "year",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "doi",
+              "displayName": "doi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "research_domain",
+              "displayName": "research_domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "methods_models",
+              "displayName": "methods_models",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "key_parameters",
+              "displayName": "key_parameters",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "key_metrics",
+              "displayName": "key_metrics",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "best_results",
+              "displayName": "best_results",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tools_dataset",
+              "displayName": "tools_dataset",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "limitations",
+              "displayName": "limitations",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "research_gap",
+              "displayName": "research_gap",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "unique_key",
+              "displayName": "unique_key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        144
+      ],
+      "name": "Append or update row in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "REPLACE_WITH_YOUR_CREDENTIAL_ID",
+          "name": "Configure googleSheetsOAuth2Api in n8n"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in Python",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in Python": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
